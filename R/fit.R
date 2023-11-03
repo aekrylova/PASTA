@@ -64,18 +64,18 @@ CalcPolyAResiduals <- function(object,
     if (!(background %in% unique(Idents(object)))) {
       stop("background must be one of the Idents of seurat object")
     }
-    message(paste0("Using", background, " as background distribution"))
+    message(paste0("Using ", background, " as background distribution"))
   }
 
 
   #check if symbols are contained in meta features
-  if (!(gene.names %in% colnames(object[[assay]][[]]))) {
+  if (!(gene.names %in% colnames(object[[assay]]@meat.features))) {
     stop("Gene.names column not found in meta.features, please make sure 
          you are specific gene.names correctly")
   }
   
-  if (sum(is.na(object[[assay]][[]][features,gene.names])) > 0) {
-    features.no.anno <- features[is.na(object[[assay]][[]][features,gene.names])]
+  if (sum(is.na(object[[assay]]@meta.features[features,gene.names])) > 0) {
+    features.no.anno <- features[is.na(object[[assay]]@meta.features[features,gene.names])]
     message(paste0("Removing ", length(features.no.anno), " sites without a gene annotation"))
     features <- setdiff(features, features.no.anno)
   }
@@ -188,7 +188,7 @@ GetBackgroundDist <- function(object, features, background, gene.names, assay,  
   suppressMessages(nt.pseudo <- AverageExpression(object, features = features, assays = assay, slot="counts"))
   nt.pseudo <- data.frame(background = nt.pseudo[[1]][,background]) #subset just the background
   nt.pseudo$background <- nt.pseudo$background * sum(Idents(object)==background)
-  nt.pseudo$gene <- paste0(object[[assay]][[]][features, gene.names], "_", object[[assay]]@meta.features[features, "strand"])
+  nt.pseudo$gene <- paste0(object[[assay]]@meta.features[features, gene.names], "_", object[[assay]]@meta.features[features, "strand"])
   nt.pseudo$peak <- rownames(nt.pseudo)
 
   nt.pseudo <- nt.pseudo[nt.pseudo$background>min.counts.background,] #subset to peaks with min number of counts

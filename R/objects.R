@@ -141,48 +141,66 @@ CreatePolyAsiteAssay <- function(
 }
 
 #' Merge polyA site assays
-#' 
+#'
 #' @export
 #' @concept objects
 #' @method merge polyAsiteAssay
-#' 
-merge.polyAsiteAssay <- function(x = NULL, 
+#'
+merge.polyAsiteAssay <- function(x = NULL,
                                  y = NULL,
-                                 add.cell.ids = NULL, 
+                                 add.cell.ids = NULL,
                                  cells= NULL, ...) {
   chromatin.x <- as(object = x, Class = 'ChromatinAssay')
   if (is.list(y)) {
     chromatin.y <- list()
     for (i in 1:length(y)) {
-      chromatin.y[[i]] <- as(object = y[[i]], Class = 'ChromatinAssay') 
+      chromatin.y[[i]] <- as(object = y[[i]], Class = 'ChromatinAssay')
     }
   } else {
-    chromatin.y <- as(object = y, Class = 'ChromatinAssay') 
+    chromatin.y <- as(object = y, Class = 'ChromatinAssay')
   }
-  chromatin.m <- merge(x = chromatin.x, y = chromatin.y, 
+  chromatin.m <- merge(x = chromatin.x, y = chromatin.y,
                        add.cells.ids = add.cell.ids, ...)
-  chromatin.m <- as(object = chromatin.m, Class = 'polyAsiteAssay')
-  return(chromatin.m)
+  polyA.m <- as(object = chromatin.m, Class = 'polyAsiteAssay')
+
+  #add back in meta features
+  meta.x <- data.frame(strand = chromatin.x@meta.features$strand)
+  meta.x$peak.tmp <- rownames(chromatin.x$counts)
+  meta.y <- data.frame(strand = chromatin.y@meta.features$strand)
+  meta.y$peak.tmp <- rownames(chromatin.y$counts)
+  meta.merge <- merge(meta.x, meta.y, by="peak.tmp", all=TRUE)
+  rownames(meta.merge) <- meta.merge$peak.tmp
+  meta.merge <- meta.merge[rownames(chromatin.m),]
+  if (any(!is.na(meta.merge$strand.x) & !is.na(meta.merge$strand.y) &
+          meta.merge$strand.x != meta.merge$strand.y)) {
+    stop("Mismatch in strand values for the same feature!")
+  }
+  meta.merge$strand <- ifelse(is.na(meta.merge$strand.x), meta.merge$strand.y, meta.merge$strand.x)
+  meta.merge$strand.x <- NULL
+  meta.merge$strand.y <- NULL
+  meta.merge$peak.tmp <- NULL
+  polyA.m <- AddMetaData(polyA.m, meta.merge)
+  return(polyA.m)
 }
 
 
-#' Subset a polyA site assay 
+#' Subset a polyA site assay
 #'
 #' @param x A polyAsiteAssay
 #' @param features Which features to retain
 #' @param cells Which cells to retain
-#' 
+#'
 #' @export
 #' @concept objects
 #' @method subset polyAsiteAssay
-#' 
-subset.polyAsiteAssay <- function(x, 
-                                  features = NULL, 
+#'
+subset.polyAsiteAssay <- function(x,
+                                  features = NULL,
                                   cells= NULL, ...) {
   chromatin <- as(object = x, Class = 'ChromatinAssay')
   chromatin <- subset(x = chromatin, cells = cells, features = features, ...)
   chromatin <- as(object = chromatin, Class = 'polyAsiteAssay')
-  
+
   # Do center.scale.data slot subsetting
   #if (dim(x@center.scale.data)[1] >0 ) {
   #  center.scale <- GetAssayData(x, slot = "center.scale.data" )
