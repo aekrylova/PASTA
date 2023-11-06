@@ -93,8 +93,8 @@ CalcPolyAResiduals <- function(object,
                                        assay = assay,
                                        min.counts.background = min.counts.background)
   #remove features without gene annotation
-  background.dist <- filter(background.dist, gene!="_-")
-  background.dist <- filter(background.dist, gene!="_+")
+  background.dist <- subset(background.dist, gene!="_-")
+  background.dist <- subset(background.dist, gene!="_+")
   features.use <- background.dist$peak
 
   ##############################################################################
