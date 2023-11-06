@@ -178,19 +178,18 @@ merge.polyAsiteAssay <- function(x = NULL,
     meta.y$peak.tmp <- rownames(chromatin.y$counts)
   }
 
-  meta.merge <- merge(meta.x, meta.y, by="peak.tmp", all=TRUE)
-  rownames(meta.merge) <- meta.merge$peak.tmp
-  meta.merge <- meta.merge[rownames(chromatin.m),]
-
+  meta.merge <- unique(merge(meta.x, meta.y, by="peak.tmp", all=TRUE))
   if (any(!is.na(meta.merge$strand.x) & !is.na(meta.merge$strand.y) &
           meta.merge$strand.x != meta.merge$strand.y)) {
     stop("Mismatch in strand values for the same feature!")
   }
-
+  rownames(meta.merge) <- meta.merge$peak.tmp
+  meta.merge <- meta.merge[rownames(chromatin.m),]
   meta.merge$strand <- ifelse(is.na(meta.merge$strand.x), meta.merge$strand.y, meta.merge$strand.x)
   meta.merge$strand.x <- NULL
   meta.merge$strand.y <- NULL
   meta.merge$peak.tmp <- NULL
+  strand(polyA.m@ranges) <- meta.merge$strand
   polyA.m <- AddMetaData(polyA.m, meta.merge)
   return(polyA.m)
 }
