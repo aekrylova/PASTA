@@ -9,7 +9,7 @@
 #' @importFrom GenomicRanges makeGRangesFromDataFrame
 #' @importFrom IRanges distanceToNearest trim
 #' @importFrom plyranges anchor_3p mutate
-#' @importFrom GenomeInfoDb seqlevelsStyle
+#' @importFrom GenomeInfoDb seqlevelsStyle seqlevelsStyle<-
 #' @importFrom methods slot
 #' @importFrom utils read.table
 #'
@@ -59,9 +59,7 @@ GetPolyADbAnnotation <- function(
   #BiocGenerics::strand(ranges) <- S4Vectors::Rle(object[[assay]][["strand"]][,1])
   #mcols(ranges)$rn <- rownames(object[[assay]])
   if (  "*" %in% unique(strand(ranges)) ){
-    if( table(strand(ranges))["*"] != 0 ){
       stop("Exiting. Cannot annotate unstranded PAS. Please remove unstranded PAS.")
-    }
   }
   if( !all(seqlevelsStyle(ranges) == seqlevelsStyle(GR.polyA.db)) ) {
     if( seqlevelsStyle(ranges)[1] == "UCSC"){
@@ -78,7 +76,7 @@ GetPolyADbAnnotation <- function(
   #gr = ranges %>% anchor_3p() %>% mutate(width=1) %>% trim()
   OL = suppressWarnings(distanceToNearest(x = GR_cleavage, subject = GR.polyA.db,
                                           ignore.strand=FALSE))
-  keep <- dplyr::filter(as.data.frame(OL), distance<= max.dist)
+  keep <- subset(as.data.frame(OL), distance<= max.dist)
 
   #write this to handle if there are 2 sites equidistant
   #if (sum(duplicated(queryHits(OL))) >0 ) {
@@ -88,11 +86,13 @@ GetPolyADbAnnotation <- function(
   #re-write this
   peak.df <- data.frame(GR)
   peak.df <- peak.df[,c("seqnames", "start", "end", "width", "strand")]
-  peak.df$peak <- rownames(object[[assay]])
+  peak.df$peak <- rownames(object[[assay]]@counts)
 
   #add information about what feature in object matches polyAdbv3 peaks
   tmp <- peak.df[keep$queryHits,]
   tmp2 <- data.frame(GR.polyA.db)[keep$subjectHits,]
+  tmp2$hg38_Position <- ifelse(tmp2$strand=="+", tmp2$end,
+                               tmp2$start)
   tmp2 <- tmp2[,!(names(tmp2) %in%  c("strand", "seqnames", "start", "end", "width"))]
   tmp3 <- cbind(tmp, tmp2)
 
