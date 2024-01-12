@@ -173,23 +173,31 @@ merge.polyAsiteAssay <- function(x = NULL,
       return(df)
     })
     meta.y <- do.call(rbind, meta.y)
+    meta.y <- unique(meta.y)
   } else {
     meta.y <- data.frame(strand = chromatin.y@meta.features$strand)
     meta.y$peak.tmp <- rownames(chromatin.y$counts)
   }
 
-  meta.merge <- unique(merge(meta.x, meta.y, by="peak.tmp", all=TRUE))
+  meta.merge <- merge(meta.x, meta.y, by="peak.tmp", all=TRUE)
   if (any(!is.na(meta.merge$strand.x) & !is.na(meta.merge$strand.y) &
-          meta.merge$strand.x != meta.merge$strand.y)) {
-    stop("Mismatch in strand values for the same feature!")
-  }
+           meta.merge$strand.x != meta.merge$strand.y)) {
+     warn(message = "Mismatch in strand values for the same feature when merging,
+          converting strand to * for that feature")
+   }
+  meta.merge$strand <- ifelse(is.na(meta.merge$strand.x), meta.merge$strand.y, meta.merge$strand.x)
+  meta.merge$strand[meta.merge$strand.x != meta.merge$strand.y] <- "*"
+  meta.merge <- meta.merge[,c("peak.tmp", "strand")]
+
+  #check for duplicates
+  duplicates <- duplicated(meta.merge$peak.tmp) | duplicated(meta.merge$peak.tmp, fromLast = TRUE)
+  meta.merge$strand[duplicates] <- "*"
+  meta.merge <- unique(meta.merge)
+
   rownames(meta.merge) <- meta.merge$peak.tmp
   meta.merge <- meta.merge[rownames(chromatin.m),]
-  meta.merge$strand <- ifelse(is.na(meta.merge$strand.x), meta.merge$strand.y, meta.merge$strand.x)
-  meta.merge$strand.x <- NULL
-  meta.merge$strand.y <- NULL
   meta.merge$peak.tmp <- NULL
-  strand(polyA.m@ranges) <- meta.merge$strand
+  BiocGenerics::strand(polyA.m@ranges) <- meta.merge$strand
   polyA.m <- AddMetaData(polyA.m, meta.merge)
   return(polyA.m)
 }
