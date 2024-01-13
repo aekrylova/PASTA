@@ -184,8 +184,11 @@ merge.polyAsiteAssay <- function(x = NULL,
            meta.merge$strand.x != meta.merge$strand.y)) {
      warn(message = "Mismatch in strand values for the same feature when merging,
           converting strand to * for that feature")
-   }
-  meta.merge$strand <- ifelse(is.na(meta.merge$strand.x), meta.merge$strand.y, meta.merge$strand.x)
+  }
+
+
+  meta.merge$strand <- ifelse(is.na(meta.merge$strand.x), as.character(meta.merge$strand.y),
+                              as.character(meta.merge$strand.x))
   meta.merge$strand[meta.merge$strand.x != meta.merge$strand.y] <- "*"
   meta.merge <- meta.merge[,c("peak.tmp", "strand")]
 
