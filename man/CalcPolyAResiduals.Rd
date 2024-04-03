@@ -12,10 +12,13 @@ CalcPolyAResiduals(
   gene.names = "symbol",
   min.counts.background = 5,
   min.variance = 0.1,
+  sample.n = 1000,
   do.scale = FALSE,
   do.center = FALSE,
   residuals.max = NULL,
   residuals.min = NULL,
+  bin.size = c(30, 30),
+  return.object = TRUE,
   verbose = TRUE
 )
 }

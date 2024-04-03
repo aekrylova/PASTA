@@ -193,6 +193,18 @@ head(m.plasma, 10)
 ```
 
 
+```{r}
+#test code 
+features <- sample(rownames(pbmc[['polyA']]@scale.data), 50)
+m.plasma.sub <- FindDifferentialPolyA(
+  pbmc,
+  features = features,
+  ident.1 = "Plasma",
+  ident.2 = "B", 
+  covariates = "donor")
+
+```
+
 # Visualize polyA site usage across groups of cells
 We can also visualize the read coverage across cell groups, which demonstrates changes in transcript structure across groups of cells. The `PolyACoveragePlot` function is based off the `CoveragePlot` function in [Signac](https://stuartlab.org/signac/), and uses the previously computed fragment file to compute local coverage.
 Beneath the coverage plot, we also display the location of polyA sites (peaks), as well as gene annotations. Note that in each of these examples, Plasmablasts exhibit increased utilization of the proximal polyA site (i.e. 3' UTR shortening)

@@ -16,7 +16,7 @@
   nfeatures.print = 30,
   reduction.key = "PC_",
   seed.use = 42,
-  do.scale = TRUE,
+  do.scale = FALSE,
   do.center = TRUE,
   residuals.max = 10,
   residuals.min = -10,
