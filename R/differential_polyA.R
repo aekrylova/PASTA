@@ -66,7 +66,7 @@ FindDifferentialPolyA <- function(
   df$ident <- relevel(df$ident, ref = ident.2)
 
   sub <- subset(df, ident %in% c(ident.1, ident.2))
-  r.matrix.sub <- r.matrix[,rownames(sub)]
+  r.matrix.sub <- r.matrix[features,rownames(sub)]
 
   all.models <- lapply(
     X = 1:nrow(x = r.matrix.sub),
@@ -111,27 +111,35 @@ FindDifferentialPolyA <- function(
 
 percentage.usage <- function( object,
                               assay = "polyA",
-                              cells = NULL,
-                              features = NULL,
+                              cells,
+                              features,
                               gene.names = "Gene_Symbol") {
 
   df <- data.frame(peak=features)
   meta <- object[[assay]]@meta.features
   df$symbol <- meta[features,gene.names]
+  df$counts1 <- rowSums(object[[assay]]@counts[df$peak, cells])
+  sum1 <- aggregate(df$counts1, by=list(gene=df$symbol), FUN=sum)
+  colnames(sum1) <- c("symbol", "sum")
+  df <- merge(df, sum1, by="symbol")
+  df$frac <- df$counts1/df$sum
+  rownames(df) <- df$peak
+  df <- df[features,]
+  return(as.vector(df$frac))
 
-  genes.idx = match(gene.names, colnames(meta))
-  genes.tmp <- meta[,genes.idx]
-  peaks.tmp <- rownames(meta[genes.tmp %in% df$symbol,])
-
-  df2 <- data.frame(peak=peaks.tmp)
-  df2$counts1 <- rowSums(object[[assay]]@counts[peaks.tmp, cells])
-  df2$gene <-meta[df2$peak, genes.idx]
-  sum1 <- aggregate(df2$counts1, by=list(gene=df2$gene), FUN=sum)
-  colnames(sum1) <- c("gene", "sum")
-  df2 <- merge(df2, sum1, by="gene")
-  df2$frac <- df2$counts1/df2$sum
-  df2 <- df2[df2$peak %in% features,]
-  return(as.vector(df2$frac))
+  # genes.idx = match(gene.names, colnames(meta))
+  # genes.tmp <- meta[,genes.idx]
+  # peaks.tmp <- rownames(meta[genes.tmp %in% df$symbol,])
+  #
+  # df2 <- data.frame(peak=peaks.tmp)
+  # df2$counts1 <- rowSums(object[[assay]]@counts[peaks.tmp, cells])
+  # df2$gene <-meta[df2$peak, genes.idx]
+  # sum1 <- aggregate(df2$counts1, by=list(gene=df2$gene), FUN=sum)
+  # colnames(sum1) <- c("gene", "sum")
+  # df2 <- merge(df2, sum1, by="gene")
+  # df2$frac <- df2$counts1/df2$sum
+  # df2 <- df2[df2$peak %in% features,]
+  # return(as.vector(df2$frac))
 }
 
 
