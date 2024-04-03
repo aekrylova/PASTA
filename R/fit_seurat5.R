@@ -42,7 +42,6 @@ CalcPolyAResiduals <- function(object,
                                residuals.max = NULL,
                                residuals.min = NULL,
                                bin.size = c(30, 30),
-                               type = "median", #median, mean, kernel or orignal
                                return.object = TRUE,
                                verbose=TRUE)
  {
@@ -145,7 +144,6 @@ CalcPolyAResiduals <- function(object,
                       background.dist = background.dist,
                       gene.sum = gene.sum, background.cells = background.cells,
                       min.variance = min.variance,
-                      type = type,
                       bin.size = bin.size,
                       sample.n = sample.n)
   #calculate residual matrix
@@ -293,9 +291,16 @@ DirichletMultionmial <- function(
 #' @concept residuals
 #'
 #'
-RegDMVar <- function(ec, var, m, m.background, background.dist, gene.sum, background.cells, min.variance = min.variance,
-                     type, bin.size = bin.size,
-                     sample.n = 1000) {
+RegDMVar <- function(ec,
+                     var, m,
+                     m.background,
+                     background.dist,
+                     gene.sum,
+                     background.cells,
+                     min.variance = min.variance,
+                     bin.size = bin.size,
+                     sample.n = 1000
+                     ) {
   expected.counts.df <- data.frame(expected.counts = matrix(ec, ncol=1))
   expected.counts.df$actual <- matrix(m[rownames(ec),], ncol=1)
   expected.counts.df$md.var <- matrix(var, ncol=1)
@@ -343,24 +348,9 @@ RegDMVar <- function(ec, var, m, m.background, background.dist, gene.sum, backgr
                                             sample_within_groups, sample.n = sample.n)), ]
   x.matrix <- matrix(cbind(df.sub$n, df.sub$expected.counts), ncol=2)
 
-  #kernel regularization
-  if (type == "original") {
-    pcf <- pcf.kernesti(x.matrix, y= df.sub$md.var ,h=0.5, N=c(lx, ly), kernel="gauss")
-    df <- data.frame(cbind(pcf$value, pcf$down, pcf$high))
-    colnames(df) <- c("reg.var", "n_low", "ec_low", "n.bin", "ec.bin")
-    df$ec_n <- paste0(df$ec.bin, "_", df$n.bin)
-  }
-
   ### if using the new  kernel estimates
   #compare to using all datasets
   if (type == "kernel") {
-    #try gplm as alternative
-    #library(gplm)
-    #?kreg
-    #define grid
-
-    #evaluate at the midpoint of the grid
-
     n_grid_midpoints <- calculate_midpoints(min.n, max.n, lx)
     ec_grid_midpoints <- calculate_midpoints(min.ec, max.ec, ly)
 
@@ -377,7 +367,6 @@ RegDMVar <- function(ec, var, m, m.background, background.dist, gene.sum, backgr
     grid.var$ec_n <- paste0(grid.var$ec_bin, "_", grid.var$n_bin)
   }
 
-
   #now get variance in all data, not just NT
   expected.counts.df$ec.bin <- findInterval(expected.counts.df$expected.counts, ec_grid)
   expected.counts.df$n.bin <- findInterval(expected.counts.df$n, n_grid)
@@ -390,141 +379,15 @@ RegDMVar <- function(ec, var, m, m.background, background.dist, gene.sum, backgr
   if (type == "kernel") {
     t3 <- left_join(expected.counts.df, grid.var, by="ec_n")
   }
-
-
-  if (type =="median" || type == "mean") {
-    df.sub2 <- df.sub %>% group_by(ec_n) %>% summarize(mean = mean(md.var),
-                                                       median = median(md.var))
-    t3 <- left_join(expected.counts.df, df.sub2, by="ec_n")
-
-  }
-  if (type == "median") {
-    t3$reg.var <- t3$median
-  }
-
-  else if (type == "mean") {
-    t3$reg.var <- t3$mean
-  }
-
-
-  #used this in original code
-  if (type == "original") {
-    t3 <- left_join(expected.counts.df, df, by=c("n.bin", "ec.bin"))
-   }
-  #if outside of 99th percentile, just use estimated variance
-  #set minimum threshold to 0.1
-
-
   t3$reg.var[is.na(t3$reg.var)] <- t3$md.var[is.na(t3$reg.var)]
   t3$reg.var.new <- t3$reg.var
-  t3$reg.var.new[t3$reg.var< min.variance] <- min.variance #set threshold as 0.1
-
-  #filter(t3, actual==0 & expected.counts.nt>0) %>% head()
+  t3$reg.var.new[t3$reg.var< min.variance] <- min.variance # variance threshold
   var.fit <- matrix(t3$reg.var.new, nrow=nrow(ec), ncol=ncol(ec))
-
   return(var.fit)
 }
 
 
-
-#should we re-write this becuase this package is no longer on CRAN?
-pcf.kernesti<-function(x,y,h,N,kernel="gauss",support=NULL)
-  #from here https://github.com/cran/regpro/blob/master/R/pcf.kernesti.R#L77
-{
-  d = 2
-  if (kernel=="bart")
-    ker<-function(xx){ return( (1-rowSums(xx^2)) ) }
-  if (kernel=="gauss")
-    ker<-function(xx){ return( exp(-rowSums(xx^2)/2) ) }
-  if (kernel=="uniform")
-    ker<-function(xx){ return( (rowSums(xx^2) <= 1) ) }
-
-  if (kernel=="gauss") radi<-2*h else radi<-h
-
-  recnum<-prod(N)
-  value<-matrix(0,recnum,1)
-  index<-matrix(0,recnum,2)
-
-  support<-matrix(0,4,1)
-  for (i in 1:2){
-    support[2*i-1]<-min(x[,i])
-    support[2*i]<-max(x[,i])
-  }
-  lowsuppo<-matrix(0,2,1)
-  for (i in 1:2) lowsuppo[i]<-support[2*i-1]
-  step<-matrix(0,2,1)
-  for (i in 1:2) step[i]<-(support[2*i]-support[2*i-1])/N[i]
-
-  for (i in 1:recnum){
-    inde<-digit(i-1,N)+1
-    arg<-lowsuppo+step*inde-step/2
-    argu<-matrix(arg,dim(x)[1],d,byrow=TRUE)
-    neigh<-(rowSums((argu-x)^2) <= radi^2)
-    if (sum(neigh)>=2){     # if there are obs in the neigborhood
-
-      xred<-x[neigh,]
-      yred<-y[neigh]
-      argu<-matrix(arg,dim(xred)[1],d,byrow=TRUE)
-
-      w<-ker((xred-argu)/h)/h^d
-      w<-w/sum(w)
-      valli<-w%*%yred
-    }
-    else valli<-mean(y)
-
-    value[i]<-valli
-    index[i,]<-inde
-  }
-
-  down<-index-1
-  high<-index
-
-  pcf<-list(
-    value=value,index=index,
-    down=down,high=high,
-    support=support,N=N)
-
-  return(pcf)
-}
-
-
-digit<-function(luku,base){
-  #Gives representation of luku for system with base
-  #
-  #luku is a natural number >=0
-  #base is d-vector of integers >=2, d>=2,
-  #base[d] tarvitaan vain tarkistamaan onko luku rajoissa
-  #
-  #Returns d-vector of integers.
-  #
-  #example: digit(52,c(10,10)), returns vector (2,5)
-  #
-  d<-length(base)
-  digi<-matrix(0,d,1)
-  jako<-matrix(0,d,1)
-  jako[d]<-base[1]
-  for (i in (d-1):1){
-    jako[i]<-base[d-i+1]*jako[i+1]
-  }
-  vah<-0
-  for (i in 1:(d-1)){
-    digi[i]<-floor((luku-vah)/jako[i+1]) #if digi[i]>base[i], then ERROR
-    vah<-vah+digi[i]*jako[i+1]
-  }
-  digi[d]<-luku-vah
-  # annetaan vastaus kaanteisesti se 2354 annetaan c(4,5,3,2)
-  # talloin vastaavuus sailyy base:n kanssa
-  #apu<-matrix(0,d,1)
-  #for (i in 1:d){
-  #  apu[i]<-digi[d-i+1]
-  #}
-  apu<-digi[d:1]
-  return(apu)
-}
-
-
 #generate midpoints
-
 calculate_midpoints <- function(a, b, n_intervals) {
   width <- (b - a) / n_intervals
   first_point <- a + width/2
