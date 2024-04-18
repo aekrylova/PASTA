@@ -28,9 +28,10 @@ Imports:
     R.utils
 Depends:
     R (>= 4.0.0),
-    methods, 
-    Seurat (>= 4.0.0),
-    Signac (>= 1.6.0)
+    methods,
+    Seurat (>= 5.0.2),
+    Signac (>= 1.13.0),
+    SeuratObject (>= 5.0.1)
 Suggests: 
     knitr,
     rmarkdown,
