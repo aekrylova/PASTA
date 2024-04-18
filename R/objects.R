@@ -80,7 +80,7 @@ polyAsiteAssay <- setClass(
 #'
 #' @export
 
-CreatePolyAsiteAssay <- function(
+CreatePolyAAssay <- function(
     counts,
     min.cells = 0,
     min.features = 0,
@@ -95,17 +95,24 @@ CreatePolyAsiteAssay <- function(
     verbose = TRUE,
     ...
 ) {
-
   if (!is.null(x = ranges)) {
     if (length(x = ranges) != nrow(x = counts)) {
       stop("Length of supplied genomic ranges does not match number
            of rows in matrix")
+    }
+    if (sum(!(as.character(strand(ranges)) %in% c("-", "+") ))) {
+      stop("At least one feature does not have a strand, please only use features
+      that have strand information")
     }
   } else {
     ranges <- FeaturesToGRanges(regions = rownames(x = counts), sep = sep)
     ranges$rownames = paste0(as.character(seqnames(ranges)),"-",
                                     as.character(start(ranges)),"-",
                                     as.character(end(ranges)))
+    if (sum(!(as.character(strand(ranges)) %in% c("-", "+") ))) {
+      stop("At least one feature does not have a strand, please make sure input is formatted correctly
+           or provide strand infromation through the 'ranges' arguement")
+    }
   }
   if (!isDisjoint(x = ranges)) {
     warning("Overlapping ranges supplied. Ranges should be non-overlapping.")
@@ -113,7 +120,6 @@ CreatePolyAsiteAssay <- function(
   if ( length( which(duplicated(rownames(counts)) == TRUE)) > 0) {
     stop("Features must be unique.")
   }
-
   chrom.assay <- CreateChromatinAssay(counts = counts,
                                       ranges = ranges,
                                       motifs = motifs,
@@ -127,16 +133,11 @@ CreatePolyAsiteAssay <- function(
                                       validate.fragments = validate.fragments,
                                       verbose = verbose)
 
-
-
   # requires input to be a ChromatinAssay
   pA.assay <- as(chrom.assay, Class = "polyAsiteAssay")
-
   pA.assay <- AddMetaData( object = pA.assay , metadata = as.character(strand(pA.assay@ranges)), col.name = "strand" )
   nCells_feature = rowSums( GetAssayData(pA.assay) > 0 )
   pA.assay <- AddMetaData( object = pA.assay , metadata = nCells_feature, col.name = "nCells_feature" )
-
-
   return(pA.assay)
 }
 

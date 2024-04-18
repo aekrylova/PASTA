@@ -348,24 +348,22 @@ RegDMVar <- function(ec,
                                             sample_within_groups, sample.n = sample.n)), ]
   x.matrix <- matrix(cbind(df.sub$n, df.sub$expected.counts), ncol=2)
 
-  ### if using the new  kernel estimates
-  #compare to using all datasets
-  if (type == "kernel") {
-    n_grid_midpoints <- calculate_midpoints(min.n, max.n, lx)
-    ec_grid_midpoints <- calculate_midpoints(min.ec, max.ec, ly)
+  ### calculate regular grid for kernel estimates
+  n_grid_midpoints <- calculate_midpoints(min.n, max.n, lx)
+  ec_grid_midpoints <- calculate_midpoints(min.ec, max.ec, ly)
 
-    grid <- matrix(cbind(rep(n_grid_midpoints, length(ec_grid_midpoints)),  rep(NA, length(n_grid_midpoints))), ncol=2)
-    grid[,2] <- rep(ec_grid_midpoints, each=length(n_grid_midpoints))
+  grid <- matrix(cbind(rep(n_grid_midpoints, length(ec_grid_midpoints)),  rep(NA, length(n_grid_midpoints))), ncol=2)
+  grid[,2] <- rep(ec_grid_midpoints, each=length(n_grid_midpoints))
 
-    mh <- kreg(x = x.matrix, y = df.sub$md.var, grid = grid)
-    grid.var <- data.frame(reg.var = mh$y)
-    grid.out <- mh$x
-    colnames(grid.out) <- c("n", "ec")
-    grid.var <- cbind(grid.var, grid.out)
-    grid.var$n_bin <- rep(1:length(n_grid_midpoints), each = length(ec_grid_midpoints))
-    grid.var$ec_bin <- rep(1:length(ec_grid_midpoints), length(n_grid_midpoints))
-    grid.var$ec_n <- paste0(grid.var$ec_bin, "_", grid.var$n_bin)
-  }
+  # calculate regularized estimates on regulatr grid
+  mh <- kreg(x = x.matrix, y = df.sub$md.var, grid = grid)
+  grid.var <- data.frame(reg.var = mh$y)
+  grid.out <- mh$x
+  colnames(grid.out) <- c("n", "ec")
+  grid.var <- cbind(grid.var, grid.out)
+  grid.var$n_bin <- rep(1:length(n_grid_midpoints), each = length(ec_grid_midpoints))
+  grid.var$ec_bin <- rep(1:length(ec_grid_midpoints), length(n_grid_midpoints))
+  grid.var$ec_n <- paste0(grid.var$ec_bin, "_", grid.var$n_bin)
 
   #now get variance in all data, not just NT
   expected.counts.df$ec.bin <- findInterval(expected.counts.df$expected.counts, ec_grid)
@@ -376,9 +374,7 @@ RegDMVar <- function(ec,
   #if just using median /mean
   #try using mean and median
 
-  if (type == "kernel") {
-    t3 <- left_join(expected.counts.df, grid.var, by="ec_n")
-  }
+  t3 <- left_join(expected.counts.df, grid.var, by="ec_n")
   t3$reg.var[is.na(t3$reg.var)] <- t3$md.var[is.na(t3$reg.var)]
   t3$reg.var.new <- t3$reg.var
   t3$reg.var.new[t3$reg.var< min.variance] <- min.variance # variance threshold
