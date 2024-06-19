@@ -17,10 +17,12 @@
 #' Default is symbol.
 #' @param min.counts.background Features with at least this many counts in the background cells are included in calculation
 #' @param min.variance Sets minimum variance. Default is 0.1.
+#' @param sample.n Max number of observations to sample in each bin when performing regularization. Default is 1000.
 #' @param do.center Return the centered residuals. Default is TRUE.
 #' @param do.scale Return the scaled residuals. Default is TRUE.
 #' @param residuals.max Clip residuals above this value. Default is NULL (no clipping).
 #' @param residuals.min Clip residuals below this value. Default is NULL (no clipping).
+#' @param number.bins Number of bins used to perform regularization. Default is 30.
 #' @param verbose Print messages.
 #'
 #'
@@ -41,8 +43,7 @@ CalcPolyAResiduals <- function(object,
                                do.center = FALSE,
                                residuals.max = NULL,
                                residuals.min = NULL,
-                               bin.size = c(30, 30),
-                               return.object = TRUE,
+                               number.bins = 30,
                                verbose=TRUE)
  {
   if(verbose) {
@@ -144,7 +145,7 @@ CalcPolyAResiduals <- function(object,
                       background.dist = background.dist,
                       gene.sum = gene.sum, background.cells = background.cells,
                       min.variance = min.variance,
-                      bin.size = bin.size,
+                      number.bins = number.bins,
                       sample.n = sample.n)
   #calculate residual matrix
   residual.matrix <- (m-ec) / sqrt(var.reg)
@@ -298,7 +299,7 @@ RegDMVar <- function(ec,
                      gene.sum,
                      background.cells,
                      min.variance = min.variance,
-                     bin.size = bin.size,
+                     number.bins = number.bins,
                      sample.n = 1000
                      ) {
   expected.counts.df <- data.frame(expected.counts = matrix(ec, ncol=1))
@@ -330,8 +331,8 @@ RegDMVar <- function(ec,
   min.n <- min(ec.background.sub$n[ec.background.sub$n < cutoff.n])
   min.ec <- min(ec.background.sub$expected.counts[ec.background.sub$expected.counts < cutoff.ec])
 
-  lx <- bin.size[1]
-  ly <- bin.size[2]
+  lx <- number.bins
+  ly <- number.bins
   n_step <- (max.n-min.n)/lx
   n_grid <- min.n + n_step*0:lx
   ec_step <- (max.ec-min.ec)/ly
