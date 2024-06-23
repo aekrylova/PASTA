@@ -13,7 +13,7 @@ RegDMVar(
   gene.sum,
   background.cells,
   min.variance = min.variance,
-  bin.size = bin.size,
+  number.bins = number.bins,
   sample.n = 1000
 )
 }
