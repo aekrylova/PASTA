@@ -168,19 +168,11 @@ CalcPolyAResiduals <- function(object,
   if (!is.null(residuals.min)) {
     residual.matrix[residual.matrix < residuals.min] <- residuals.min
   }
-
-  #return just residuals if return.object=FALSE
-  if (!return.object) {
-    return(residual.matrix)
-  }
   #change default assay
-  if (return.object) {
-    DefaultAssay(object = object) <- assay
-    #need to met SetAssayData, GetAssayData for residuals
-    object[[assay]]@scale.data <- residual.matrix
-    object <- LogSeuratCommand(object = object)
-    return(object)
-  }
+  DefaultAssay(object = object) <- assay
+  #need to met SetAssayData, GetAssayData for residuals
+  object[[assay]]@scale.data <- residual.matrix
+  object <- LogSeuratCommand(object = object)
 }
 
 
