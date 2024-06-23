@@ -30,8 +30,8 @@ FindDifferentialPolyA <- function(
     covariates = NULL,
     gene.names = "Gene_Symbol") {
 
-  if (class(object[[assay]]) != "polyAsiteAssay") {
-    stop("assay is not a polyAsite assay")
+  if( !inherits(object[[assay]], "polyAsiteAssay")){
+    stop(paste0(assay," assay is not a polyAsiteAssay"))
   }
 
   if (dim(GetAssayData(object, slot="scale.data", assay = assay))[1] == 0)  {
@@ -114,7 +114,6 @@ percentage.usage <- function( object,
                               cells,
                               features,
                               gene.names = "Gene_Symbol") {
-
   df <- data.frame(peak=features)
   meta <- object[[assay]]@meta.features
   df$symbol <- meta[features,gene.names]
@@ -125,21 +124,8 @@ percentage.usage <- function( object,
   df$frac <- df$counts1/df$sum
   rownames(df) <- df$peak
   df <- df[features,]
+  df$frac[df$sum==0] <- 0
   return(as.vector(df$frac))
-
-  # genes.idx = match(gene.names, colnames(meta))
-  # genes.tmp <- meta[,genes.idx]
-  # peaks.tmp <- rownames(meta[genes.tmp %in% df$symbol,])
-  #
-  # df2 <- data.frame(peak=peaks.tmp)
-  # df2$counts1 <- rowSums(object[[assay]]@counts[peaks.tmp, cells])
-  # df2$gene <-meta[df2$peak, genes.idx]
-  # sum1 <- aggregate(df2$counts1, by=list(gene=df2$gene), FUN=sum)
-  # colnames(sum1) <- c("gene", "sum")
-  # df2 <- merge(df2, sum1, by="gene")
-  # df2$frac <- df2$counts1/df2$sum
-  # df2 <- df2[df2$peak %in% features,]
-  # return(as.vector(df2$frac))
 }
 
 
