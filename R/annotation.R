@@ -41,7 +41,7 @@ GetPolyADbAnnotation <- function(
   if( !assay %in% Assays(object) ){
     stop(paste0(assay," assay is not present in object"))
   }
-  if( !class(object[[assay]]) == "polyAsiteAssay"){
+  if( !inherits(object[[assay]], "polyAsiteAssay")){
     stop(paste0(assay," assay is not a polyAsiteAssay"))
   }
   if( !assay == DefaultAssay(object)){
