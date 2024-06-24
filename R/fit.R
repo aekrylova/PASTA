@@ -51,11 +51,9 @@ CalcPolyAResiduals <- function(object,
   }
 
   #if features in NULL, then specify all features in polyA assay
-  #TO DO: change to all features with a gene annotation
   if (is.null(features)) {
     features <- rownames(LayerData(object, assay=assay, layer="counts"))
   }
-
 
   #if background is NULl, then make a dummy variable
   if (is.null(background)) {
@@ -83,7 +81,6 @@ CalcPolyAResiduals <- function(object,
     message(paste0("Removing ", length(features.no.anno), " sites without a gene annotation"))
     features <- setdiff(features, features.no.anno)
   }
-
 
   ##############################################################################
   #get pseudobulked fraction of reads from background
@@ -249,14 +246,13 @@ DirichletMultionmial <- function(
   t <- t(t)
   fit <- try(compareFit <- suppressWarnings(MGLMfit(t, dist="DM")), silent=TRUE)
 
-  if (class(fit)!="try-error") {
+  if (!inherits(fit, "try-error")) {
     param <- compareFit@estimate
     sum.p <- sum(param)
     n <-  as.numeric(gene.sum[gene.test,])
     expect.tmp <- data.frame(matrix(nrow=ncells, ncol=length(peaks)))
     var.tmp <- data.frame(matrix(nrow=ncells, ncol=length(peaks)))
     #calculate expected and variance for each peak
-    #TOD DO CHANGE THIS TO MATRIX FORMATI
     for (i in 1:length(peaks)) {
       expect.x <- n*param[i]/sum.p
       var.x <- expect.x*(1- param[i]/sum.p)*(n + sum.p)/(1+sum.p)
@@ -362,10 +358,6 @@ RegDMVar <- function(ec,
   expected.counts.df$ec.bin <- findInterval(expected.counts.df$expected.counts, ec_grid)
   expected.counts.df$n.bin <- findInterval(expected.counts.df$n, n_grid)
   expected.counts.df$ec_n <- paste0(expected.counts.df$ec.bin, "_", expected.counts.df$n.bin)
-
-  ####
-  #if just using median /mean
-  #try using mean and median
 
   t3 <- left_join(expected.counts.df, grid.var, by="ec_n")
   t3$reg.var[is.na(t3$reg.var)] <- t3$md.var[is.na(t3$reg.var)]
