@@ -168,7 +168,7 @@ CalcPolyAResiduals <- function(object,
   #change default assay
   DefaultAssay(object = object) <- assay
   #need to met SetAssayData, GetAssayData for residuals
-  object[[assay]]@scale.data <- residual.matrix
+  LayerData(object, layer = "scale.data") <- residual.matrix
   object <- LogSeuratCommand(object = object)
 }
 
