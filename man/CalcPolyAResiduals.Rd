@@ -9,7 +9,7 @@ CalcPolyAResiduals(
   assay = "polyA",
   features = NULL,
   background = NULL,
-  gene.names = "symbol",
+  gene.names = "Gene_Symbol",
   min.counts.background = 5,
   min.variance = 0.1,
   sample.n = 1000,
