@@ -1,9 +1,11 @@
 ---
-title: "Analyzing Alternative Polyadenylation in scRNA-seq datasets with PASTA and Seurat"
+title: "Analyzing Alternative Polyadenylation in scRNA-seq datasets
+  with PASTA and Seurat"
 output:
   html_document:
     theme: united
     df_print: kable
+  pdf_document: default
 date: 'Compiled: `r format(Sys.Date(), "%B %d, %Y")`'
 ---
 
@@ -24,10 +26,7 @@ In [Kowalski\* , Wessels\*, Linder\*](https://www.biorxiv.org/content/10.1101/20
 
 We have implemented these methods in an R package [PASTA (PolyA Site analysis using relative Transcript Abundance)](https://github.com/satijalab/PASTA) that interfaces directly with Seurat. In this vignette, we demonstrate how to use PASTA and Seurat to analyze a dataset of 49,958 circulating human peripheral blood mononuclear cells (PBMC). This vignette demonstrates how to reproduce results from Figure 6 in [our manuscript](https://www.biorxiv.org/content/10.1101/2023.02.09.527751v1). While this represents an initial demonstration of PASTA, we will be adding significant functionality and documentation in future releases.
 
-First, we install PASTA and dependencies. Note: At the time of release of this vignette, there was an issue with GenomeInfoDb.
-You may have to install as described [here](https://github.com/Bioconductor/GenomeInfoDb/issues/82), if you do not have the latest version of Bioconductor installed. 
-
-
+First, we install PASTA and dependencies.
 ```{r install_packages, eval=FALSE}
 #install remotes and BiocManager if necessary 
 if (!requireNamespace("remotes", quietly = TRUE))
@@ -36,8 +35,8 @@ if (!requireNamespace("BiocManager", quietly = TRUE))
     install.packages("BiocManager")
 
 #additionally install several Bioconductor dependencies
-BiocManager::install(c("BSgenome.Hsapiens.UCSC.hg38", "EnsDb.Hsapiens.v86", "rtracklayer","GenomicFeatures","plyranges"))
-
+BiocManager::install(c("BSgenome.Hsapiens.UCSC.hg38", "EnsDb.Hsapiens.v86", "rtracklayer","GenomicFeatures",
+                       "plyranges", "org.Hs.eg.db", "clusterProfiler", "enrichplot"))
 remotes::install_github("satijalab/PASTA")
 ```
 
@@ -46,6 +45,9 @@ remotes::install_github("satijalab/PASTA")
 library(PASTA) 
 library(ggplot2)
 library(EnsDb.Hsapiens.v86)
+library(org.Hs.eg.db)
+library(clusterProfiler)
+library(enrichplot)
 ```
 
 The data for this vignette can be found on the following [site](https://zenodo.org/record/7617270#.Y-RcwOzMJzU): 
@@ -68,7 +70,7 @@ metadata.file <- paste0(dir, "PBMC_meta_data.csv")
 
 # Create Seurat object and annotate cell types
 First, we create a Seurat object based on a pre-quantified scRNA-seq expression matrix of human PBMC. We then annotate cell types using our Azimuth reference, as described [here](https://satijalab.github.io/azimuth/articles/run_azimuth_tutorial.html). 
-```{r read_rna,  fig.height=5, fig.width=7, message=FALSE, results='hide'}
+```{r read_rna,  fig.height=5, fig.width=7, message=FALSE, results='hide', eval=FALSE}
 library(Azimuth)
 counts = Read10X(dir)
 pbmc <- CreateSeuratObject(counts, min.cells = 3, min.features = 200)
@@ -83,9 +85,15 @@ obj.list <- SplitObject(pbmc, split.by = "donor")
 obj.list <- lapply(obj.list, FUN = RunAzimuth , reference = "pbmcref")
 pbmc <- merge(obj.list[[1]], obj.list[2:length(obj.list)], merge.dr = "ref.umap")
 
+```
+
+```{r read_in, include=FALSE}
+pbmc <- readRDS(file="/brahms/kowalskim/data/polyA/data/revision/pbmc/pbmc_obj.Rds")
+```
+
+```{r dim_plot,  fig.height=4, fig.width=6, message=FALSE, results='hide'}
 # note that Azimuth provides higher-resolution annotations with pbmc$celltype.l2
 Idents(pbmc) <- pbmc$celltype.l1
-
 library(RColorBrewer)
 cols <- colorRampPalette(brewer.pal(8, "Dark2"))(30)
 cols.l1 <- cols[c(1:4, 9, 11, 25, 29, 30)]
@@ -104,12 +112,13 @@ Next, we create a polyA assay that we will add to the Seurat object, which quant
 Once we read in these files, we can create a polyA assay, and add it to the Seurat pbmc object.
 
 ```{r load_polyA}
+options(Seurat.object.assay.calcn = TRUE)
 polyA.counts = ReadPolyApipe(counts.file = counts.file, 
                              peaks.file = peak.file, 
                              filter.chromosomes = TRUE,
                              min.features = 10, 
                              min.cells = 25)
-polyA.assay = CreatePolyAsiteAssay(counts = polyA.counts , genome = "hg38", fragments = fragment.file, validate.fragments = FALSE)
+polyA.assay = CreatePolyAAssay(counts = polyA.counts , genome = "hg38", fragments = fragment.file, validate.fragments = FALSE)
 #add annotations to polyA.assay 
 annotations <- GetGRangesFromEnsDb(ensdb = EnsDb.Hsapiens.v86)
 genome(annotations) <- "hg38"
@@ -138,13 +147,13 @@ pbmc <- GetPolyADbAnnotation(
   polyAdb.file = polyAdb.file,
   max.dist = 50)
 meta <- pbmc[['polyA']][[]]
- head(meta[,c(1, 13,15, 18)])
+head(meta[,c(1, 13,15, 18)])
 ```
 # Quantify relative polyA site usage at single-cell resolution
 We can now calculate polyA residuals, as described in our [manuscript](LINK). For this analysis we will focus on tandem polyadenylation events reflecting the usage of distinct polyA sites located in the 3' UTR of the terminal exon. Once we select features, we can run the `CalcPolyAResiduals` function. The residuals are stored in the `scale.data` slot of the polyA assay.
 
 ```{r calc_polyA_residuals}
-# extract 14,985 features in 3' UTRs
+# extract features in 3' UTRs
 features.last.exon = rownames(subset(meta, Intron.exon_location == "3'_most_exon"))
 length(features.last.exon) 
 
@@ -154,13 +163,17 @@ pbmc <- CalcPolyAResiduals(pbmc,
   features = features.last.exon,
   gene.names = "Gene_Symbol",
   verbose=TRUE)
+
 ```
 
 
 # Perform dimension reduction on polyA residuals
-Now, we can perform dimension reduction directly on the polyA residuals. The workflow is similar to scRNA-seq: we use `FindVariableFeatures` to identify  polyA sites that vary across cells, and then run perform dimension reduction on the variable polyA sites. We see that there is a very strong separation between Plasma cell and other celltypes.
+Now, we can perform dimension reduction directly on the polyA residuals. The workflow is similar to scRNA-seq: we use `FindVariableFeatures` to identify  polyA sites that vary across cells, and then run perform dimension reduction on the variable polyA sites. We see that there is a very strong separation between plasma cells and other celltypes. 
 
-```{r dim_reduc, fig.height=5, fig.width=7}
+Plasma cells are known to change their polyA site usage at the IGHM gene, which was one of the first described instances of alternative polydaenylation ([Alt et al, Cell, 1980](https://pubmed.ncbi.nlm.nih.gov/6771018/)). They have also been shown to change their 3'UTR usage more broadly ([Cheng et al, Nature Communications, 2020](https://www.nature.com/articles/s41467-020-16959-2)). Next, we will perform 
+transcriptome-wide analysis to characterize genes whose 3'UTR length changes between plasma cells and B cells.
+
+```{r dim_reduc, fig.height=4, fig.width=6}
 pbmc <- FindVariableFeatures(pbmc, selection.method = "residuals", 
                             gene.names="Gene_Symbol")
 pbmc <- RunPCA(pbmc)
@@ -170,7 +183,7 @@ DimPlot(pbmc, group.by="celltype.l1", reduction = "polyA.umap", cols = cols.l1) 
 ```
 
 # Perform differential polyadenylation analysis
-Analagous to differential expression anlaysis, we can also perform differential polyadenylation analysis. As described in [our manuscript](LINK), this function aims to identify polyA sites whose relative usage within a gene changes across different groups of cells. Here, we identify differentially polyadenylated sites between Plasma cells and B cells.
+Analagous to differential expression anlaysis, we can also perform differential polyadenylation analysis. As described in [our manuscript](https://www.biorxiv.org/content/10.1101/2023.02.09.527751v1), this function aims to identify polyA sites whose relative usage within a gene changes across different groups of cells. Here, we identify differentially polyadenylated sites between Plasma cells and B cells.
 
 The FindDifferentialPolyA function returns the following outputs: 
   
@@ -192,30 +205,51 @@ m.plasma <- FindDifferentialPolyA(
 head(m.plasma, 10)
 ```
 
-
-```{r}
-#test code 
-features <- sample(rownames(pbmc[['polyA']]@scale.data), 50)
-m.plasma.sub <- FindDifferentialPolyA(
-  pbmc,
-  features = features,
-  ident.1 = "Plasma",
-  ident.2 = "B", 
-  covariates = "donor")
-
+```{r save, include=FALSE}
+saveRDS(m.plasma, file="/brahms/kowalskim/data/polyA/data/revision/pbmc/plasma_sites.Rds")
 ```
 
 # Visualize polyA site usage across groups of cells
 We can also visualize the read coverage across cell groups, which demonstrates changes in transcript structure across groups of cells. The `PolyACoveragePlot` function is based off the `CoveragePlot` function in [Signac](https://stuartlab.org/signac/), and uses the previously computed fragment file to compute local coverage.
-Beneath the coverage plot, we also display the location of polyA sites (peaks), as well as gene annotations. Note that in each of these examples, Plasmablasts exhibit increased utilization of the proximal polyA site (i.e. 3' UTR shortening)
 
-```{r gene_examples, fig.height=7, fig.width=7}
+Beneath the coverage plot, we also display the location of polyA sites (peaks), as well as gene annotations. Note that in each of these examples, plasma cells exhibit increased utilization of the proximal polyA site (i.e. 3' UTR shortening).
+
+```{r gene_examples, fig.height=4, fig.width=4}
 Idents(pbmc) <- pbmc$celltype.l1
 #by default shows all polyAsites where we calculated polyA residuals in a gene
 PolyACoveragePlot(pbmc, gene = "EIF1") & 
   scale_fill_manual(values = cols.l1)
 PolyACoveragePlot(pbmc, gene = "TMBIM6") & 
   scale_fill_manual(values = cols.l1)
+```
+
+
+```{r ighm_example, fig.height=5, fig.width=5, include=FALSE}
+CoveragePlot(pbmc, "14-105851705-105854517",  
+             idents = c("Plasma", "B"),
+             extend.upstream = 500, extend.downstream = 200)  &
+  scale_fill_manual(values = cols.l1)
+```
+
+
+# Pathway analysis on genes with changes in 3'UTR length 
+To understand if the genes that change their 3'UTR usage in plasma cells compared to B cells are enriched in any particular biological process, we perform GO enrichment analysis, as implemented in the [clusterProfiler](https://bioconductor.org/packages/release/bioc/html/clusterProfiler.html) package.
+
+First, we convert the gene symbol of these genes to Entrez IDs, then use the enrichGO function 
+to find pathways that are enriched. Gene Ontology analysis revealed a strong enrichment 
+for Golgi vesicle transport and protein localization, which are linked to the core secretory 
+phenotypes of plasma cells.
+
+```{r go_enrichment, fig.height=6, fig.width=8}
+plasma.genes <- unique(subset(m.plasma, p_val_adj <0.05)$symbol)
+g.go <- bitr(plasma.genes, fromType = "SYMBOL",
+             toType = "ENTREZID",
+             OrgDb = org.Hs.eg.db)
+go.results <- enrichGO(g.go$ENTREZID, 'org.Hs.eg.db', ont="BP", pvalueCutoff=0.05)
+go.results <- setReadable(go.results, OrgDb = org.Hs.eg.db)
+go.results.simp <- simplify(go.results, cutoff=0.7, by="p.adjust", select_fun=min)
+p <- dotplot(go.results.simp)
+p + scale_colour_gradient(low="maroon", high="grey")
 ```
 
 
