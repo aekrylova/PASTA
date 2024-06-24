@@ -86,9 +86,12 @@ FindDifferentialPolyA <- function(
 
   gene.idx = match(gene.names, colnames(object[[assay]][[]]))
   main.effects$symbol <- object[[assay]][[]][main.effects$peak,gene.idx]
+
   #get all features within genes to calculate percentage.usage
-  features.all.genes <- rownames(filter(object[[assay]][[]], !!sym(gene.names) %in% unique(main.effects$symbol)))
+  #also require that they have residuals calculated
+  features.all.genes <- rownames(object[[assay]][[]][object[[assay]][[]][[gene.names]] %in% unique(main.effects$symbol), ])
   features.all.genes <- intersect(features.all.genes, rownames(LayerData(object[[assay]], layer="scale.data")))
+  #calculate percentage usage in group 1 and group 2
   percent.1 <- percentage.usage(object,
                                 assay = assay,
                                 cells = WhichCells(object, idents = ident.1),
