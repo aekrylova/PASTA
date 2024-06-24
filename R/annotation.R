@@ -55,9 +55,6 @@ GetPolyADbAnnotation <- function(
   }
 
   features <- rownames(object[[assay]]@counts)
-  #why include this?
-  #BiocGenerics::strand(ranges) <- S4Vectors::Rle(object[[assay]][["strand"]][,1])
-  #mcols(ranges)$rn <- rownames(object[[assay]])
   if (  "*" %in% unique(strand(ranges)) ){
       stop("Exiting. Cannot annotate unstranded PAS. Please remove unstranded PAS.")
   }
