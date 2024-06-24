@@ -1,6 +1,7 @@
 Package: PASTA
 Title: PolyA Site usage adjusting for Transcript Abundance
-Version: 0.0.0.9000
+Version: 0.1.0
+Data: 2024-06-24
 Authors@R: c( 
     person(given = "Madeline", family = "Kowalski", email = "mkowalski@nygenome.org", role = c("cre")),
     person(given = "Harm", family = "Wessels", email = "hwessels@nygenome.org", role = c("aut"))
@@ -19,13 +20,9 @@ Imports:
     dplyr,
     MGLM,
     stats,
-    plyr,
     GenomeInfoDb,
-    GenomicFeatures,
     plyranges,
     IRanges,
-    magrittr,
-    R.utils,
     gplm,
     irlba
 Depends:
