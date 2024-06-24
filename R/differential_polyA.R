@@ -10,7 +10,9 @@
 #' @param assay name of polyAsite assay to test. Default is polyA.
 #' @param ident.1 Identity class to find polyA sites for
 #' @param ident.2 A second identity class for comparison.
-#' @param features Features to test. Default is all features.
+#' @param features Features to test. Default is all features. If a subset of
+#' features is provided, pct.1 and pct.2 will be calculated using all features
+#' with the same gene annotation where residuals have been calculated.
 #' @param covariates Vector of covariates to include in linear model.
 #' @param gene.names Column name providing gene annotation of each polyA site.
 #' Default is "Gene_Symbol"
@@ -35,7 +37,7 @@ FindDifferentialPolyA <- function(
   }
 
   if (dim(LayerData(object, layer="scale.data", assay = assay))[1] == 0)  {
-    stop ("No features found in scale.data slot for specified assay. Run CalcPolyAResiduals prior to FindPolyASites")
+    stop ("No features found in scale.data layer for specified assay. Run CalcPolyAResiduals prior to FindPolyASites")
   }
 
   if (!(gene.names %in% colnames(object[[assay]][[]]))) {
@@ -60,8 +62,6 @@ FindDifferentialPolyA <- function(
   }
 
   features <- features %||% rownames(x = object[[assay]]@scale.data)
-
-
   r.matrix <- object[[assay]]@scale.data
   df$ident <- relevel(df$ident, ref = ident.2)
 
@@ -86,16 +86,21 @@ FindDifferentialPolyA <- function(
 
   gene.idx = match(gene.names, colnames(object[[assay]][[]]))
   main.effects$symbol <- object[[assay]][[]][main.effects$peak,gene.idx]
-  main.effects$percent.1 <- percentage.usage(object,
-                                             assay = assay,
-                                             cells = WhichCells(object, idents = ident.1),
-                                             features = main.effects$peak,
-                                             gene.names = gene.names)
-  main.effects$percent.2 <- percentage.usage(object,
-                                             assay = assay,
-                                             cells = WhichCells(object, idents = ident.2),
-                                             features = main.effects$peak,
-                                             gene.names = gene.names)
+  #get all features within genes to calculate percentage.usage
+  features.all.genes <- rownames(filter(object[[assay]][[]], !!sym(gene.names) %in% unique(main.effects$symbol)))
+  features.all.genes <- intersect(features.all.genes, rownames(LayerData(object[[assay]], layer="scale.data")))
+  percent.1 <- percentage.usage(object,
+                                assay = assay,
+                                cells = WhichCells(object, idents = ident.1),
+                                features = features.all.genes,
+                                gene.names = gene.names)
+  main.effects$percent.1 <- percent.1[main.effects$peak]
+  percent.2 <- percentage.usage(object,
+                                assay = assay,
+                                cells = WhichCells(object, idents = ident.2),
+                                features = features.all.genes,
+                                gene.names = gene.names)
+  main.effects$percent.2 <- percent.2[main.effects$peak]
   main.effects$p_val_adj <- main.effects$p.value * nrow(object[[assay]]@scale.data)
   main.effects$p_val_adj[main.effects$p_val_adj  > 1] <- 1
 
@@ -104,7 +109,6 @@ FindDifferentialPolyA <- function(
 
   #order by p-value
   main.effects.return <- main.effects.return[ with(main.effects.return, order(p_val_adj, -Estimate)),]
-
   return(main.effects.return)
 }
 
@@ -125,7 +129,9 @@ percentage.usage <- function( object,
   rownames(df) <- df$peak
   df <- df[features,]
   df$frac[df$sum==0] <- 0
-  return(as.vector(df$frac))
+  v <- as.vector(df$frac)
+  names(v) <- features
+  return(v)
 }
 
 
