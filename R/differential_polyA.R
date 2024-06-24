@@ -34,7 +34,7 @@ FindDifferentialPolyA <- function(
     stop(paste0(assay," assay is not a polyAsiteAssay"))
   }
 
-  if (dim(GetAssayData(object, slot="scale.data", assay = assay))[1] == 0)  {
+  if (dim(LayerData(object, layer="scale.data", assay = assay))[1] == 0)  {
     stop ("No features found in scale.data slot for specified assay. Run CalcPolyAResiduals prior to FindPolyASites")
   }
 
