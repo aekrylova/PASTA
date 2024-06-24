@@ -23,3 +23,10 @@ test_that("Percentages within a gene sum to 1", {
   expect_equal(sum(subset(m, symbol=="ARPC1B")$percent.1), 1)
   expect_equal(sum(subset(m, symbol=="ARPC1B")$percent.2), 1)
 })
+
+m2 <- FindDifferentialPolyA(polyA_small, ident.1 =  "A", ident.2 = "B",
+                      features = c("12-124911648-124911947", "14-75282887-75283186"))
+test_that("Subsetting features gives same results", {
+  expect_equal(m2, m[c("12-124911648-124911947", "14-75282887-75283186"),])
+})
+
