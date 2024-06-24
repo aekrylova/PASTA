@@ -24,8 +24,8 @@
 FindDifferentialPolyA <- function(
     object,
     assay = "polyA",
-    ident.1 = NULL,
-    ident.2 = NULL,
+    ident.1,
+    ident.2,
     features = NULL,
     covariates = NULL,
     gene.names = "Gene_Symbol") {
