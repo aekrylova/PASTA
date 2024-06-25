@@ -12,7 +12,9 @@ RegDMVar(
   background.dist,
   gene.sum,
   background.cells,
-  min.variance = min.variance
+  min.variance = min.variance,
+  number.bins = number.bins,
+  sample.n = 1000
 )
 }
 \value{

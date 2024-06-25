@@ -1,6 +1,7 @@
 Package: PASTA
 Title: PolyA Site usage adjusting for Transcript Abundance
-Version: 0.0.0.9000
+Version: 0.1.0
+Data: 2024-06-24
 Authors@R: c( 
     person(given = "Madeline", family = "Kowalski", email = "mkowalski@nygenome.org", role = c("cre")),
     person(given = "Harm", family = "Wessels", email = "hwessels@nygenome.org", role = c("aut"))
@@ -9,7 +10,7 @@ Description: What the package does (one paragraph).
 License: MIT + file LICENSE
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
-RoxygenNote: 7.2.3
+RoxygenNote: 7.3.1
 Imports: 
     data.table,
     Matrix,
@@ -19,19 +20,21 @@ Imports:
     dplyr,
     MGLM,
     stats,
-    plyr,
     GenomeInfoDb,
-    GenomicFeatures,
     plyranges,
     IRanges,
-    magrittr,
-    R.utils
+    gplm,
+    irlba
 Depends:
     R (>= 4.0.0),
-    methods, 
-    Seurat (>= 4.0.0),
-    Signac (>= 1.6.0)
+    methods,
+    Seurat (>= 5.0.2),
+    Signac (>= 1.13.0),
+    SeuratObject (>= 5.0.1)
 Suggests: 
     knitr,
-    rmarkdown
+    rmarkdown,
+    testthat (>= 3.0.0)
 VignetteBuilder: knitr
+Config/testthat/edition: 3
+LazyData: true

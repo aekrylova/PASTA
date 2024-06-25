@@ -8,8 +8,8 @@ polyA residuals.}
 FindDifferentialPolyA(
   object,
   assay = "polyA",
-  ident.1 = NULL,
-  ident.2 = NULL,
+  ident.1,
+  ident.2,
   features = NULL,
   covariates = NULL,
   gene.names = "Gene_Symbol"
@@ -24,7 +24,9 @@ FindDifferentialPolyA(
 
 \item{ident.2}{A second identity class for comparison.}
 
-\item{features}{Features to test. Default is all features.}
+\item{features}{Features to test. Default is all features. If a subset of
+features is provided, pct.1 and pct.2 will be calculated using all features
+with the same gene annotation where residuals have been calculated.}
 
 \item{covariates}{Vector of covariates to include in linear model.}
 

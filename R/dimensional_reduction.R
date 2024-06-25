@@ -2,7 +2,7 @@
  #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
  # Functions
  #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
- 
+
 #' RunPCA on PolyA site assay
 #' @param assay Name of Assay PCA is being run on
 #' @param npcs Total Number of PCs to compute and store (50 by default)
@@ -23,7 +23,7 @@
 #' @importFrom irlba irlba
 #' @importFrom stats prcomp
 #' @importFrom utils capture.output
-#' 
+#'
 #' @param object A polyAsiteAssay
 #' @param features Features to run PCA on
 #' @param do.scale Scale residuals before performing PCA. Default is TRUE.
@@ -31,7 +31,7 @@
 #' @param residuals.max Clip residuals above this value before performing PCA (default is 10)
 #' @param residuals.min Clip residuals below this value before performing PCA (default is -10)
 #'
-#' @rdname RunPCA 
+#' @rdname RunPCA
 #' @concept dimensional_reduction
 #' @export
 #' @method RunPCA polyAsiteAssay
@@ -48,7 +48,7 @@ RunPCA.polyAsiteAssay <- function(
   nfeatures.print = 30,
   reduction.key = "PC_",
   seed.use = 42,
-  do.scale = TRUE,
+  do.scale = FALSE,
   do.center = TRUE,
   residuals.max = 10,
   residuals.min = -10,
@@ -87,7 +87,7 @@ RunPCA.polyAsiteAssay <- function(
   }
 
   #make a new temporary assay to run PCA
-  pcs <- RunPCA(object = residual.matrix, 
+  pcs <- RunPCA(object = residual.matrix,
                 assay = assay,
                 npcs = npcs,
                 rev.pca = rev.pca,

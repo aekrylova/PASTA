@@ -80,7 +80,7 @@ polyAsiteAssay <- setClass(
 #'
 #' @export
 
-CreatePolyAsiteAssay <- function(
+CreatePolyAAssay <- function(
     counts,
     min.cells = 0,
     min.features = 0,
@@ -95,17 +95,24 @@ CreatePolyAsiteAssay <- function(
     verbose = TRUE,
     ...
 ) {
-
   if (!is.null(x = ranges)) {
     if (length(x = ranges) != nrow(x = counts)) {
       stop("Length of supplied genomic ranges does not match number
            of rows in matrix")
+    }
+    if (sum(!(as.character(strand(ranges)) %in% c("-", "+") ))) {
+      stop("At least one feature does not have a strand, please only use features
+      that have strand information")
     }
   } else {
     ranges <- FeaturesToGRanges(regions = rownames(x = counts), sep = sep)
     ranges$rownames = paste0(as.character(seqnames(ranges)),"-",
                                     as.character(start(ranges)),"-",
                                     as.character(end(ranges)))
+    if (sum(!(as.character(strand(ranges)) %in% c("-", "+") ))) {
+      stop("At least one feature does not have a strand, please make sure input is formatted correctly
+           or provide strand infromation through the 'ranges' arguement")
+    }
   }
   if (!isDisjoint(x = ranges)) {
     warning("Overlapping ranges supplied. Ranges should be non-overlapping.")
@@ -113,7 +120,6 @@ CreatePolyAsiteAssay <- function(
   if ( length( which(duplicated(rownames(counts)) == TRUE)) > 0) {
     stop("Features must be unique.")
   }
-
   chrom.assay <- CreateChromatinAssay(counts = counts,
                                       ranges = ranges,
                                       motifs = motifs,
@@ -127,62 +133,97 @@ CreatePolyAsiteAssay <- function(
                                       validate.fragments = validate.fragments,
                                       verbose = verbose)
 
-
-
   # requires input to be a ChromatinAssay
   pA.assay <- as(chrom.assay, Class = "polyAsiteAssay")
-
   pA.assay <- AddMetaData( object = pA.assay , metadata = as.character(strand(pA.assay@ranges)), col.name = "strand" )
   nCells_feature = rowSums( GetAssayData(pA.assay) > 0 )
   pA.assay <- AddMetaData( object = pA.assay , metadata = nCells_feature, col.name = "nCells_feature" )
-
-
   return(pA.assay)
 }
 
 #' Merge polyA site assays
-#' 
+#'
 #' @export
 #' @concept objects
 #' @method merge polyAsiteAssay
-#' 
-merge.polyAsiteAssay <- function(x = NULL, 
+#'
+merge.polyAsiteAssay <- function(x = NULL,
                                  y = NULL,
-                                 add.cell.ids = NULL, 
+                                 add.cell.ids = NULL,
                                  cells= NULL, ...) {
   chromatin.x <- as(object = x, Class = 'ChromatinAssay')
   if (is.list(y)) {
     chromatin.y <- list()
     for (i in 1:length(y)) {
-      chromatin.y[[i]] <- as(object = y[[i]], Class = 'ChromatinAssay') 
+      chromatin.y[[i]] <- as(object = y[[i]], Class = 'ChromatinAssay')
     }
   } else {
-    chromatin.y <- as(object = y, Class = 'ChromatinAssay') 
+    chromatin.y <- as(object = y, Class = 'ChromatinAssay')
   }
-  chromatin.m <- merge(x = chromatin.x, y = chromatin.y, 
+  chromatin.m <- merge(x = chromatin.x, y = chromatin.y,
                        add.cells.ids = add.cell.ids, ...)
-  chromatin.m <- as(object = chromatin.m, Class = 'polyAsiteAssay')
-  return(chromatin.m)
+  polyA.m <- as(object = chromatin.m, Class = 'polyAsiteAssay')
+
+  #add back in meta features
+  meta.x <- data.frame(strand = chromatin.x@meta.features$strand)
+  meta.x$peak.tmp <- rownames(chromatin.x$counts)
+  if (is.list(chromatin.y)) {
+    meta.y <- lapply(chromatin.y, function(chromatin) {
+      df <- data.frame(strand = chromatin@meta.features$strand)
+      df$peak.tmp <- rownames(chromatin$counts)
+      return(df)
+    })
+    meta.y <- do.call(rbind, meta.y)
+    meta.y <- unique(meta.y)
+  } else {
+    meta.y <- data.frame(strand = chromatin.y@meta.features$strand)
+    meta.y$peak.tmp <- rownames(chromatin.y$counts)
+  }
+
+  meta.merge <- merge(meta.x, meta.y, by="peak.tmp", all=TRUE)
+  if (any(!is.na(meta.merge$strand.x) & !is.na(meta.merge$strand.y) &
+           meta.merge$strand.x != meta.merge$strand.y)) {
+     warn(message = "Mismatch in strand values for the same feature when merging,
+          converting strand to * for that feature")
+  }
+
+
+  meta.merge$strand <- ifelse(is.na(meta.merge$strand.x), as.character(meta.merge$strand.y),
+                              as.character(meta.merge$strand.x))
+  meta.merge$strand[meta.merge$strand.x != meta.merge$strand.y] <- "*"
+  meta.merge <- meta.merge[,c("peak.tmp", "strand")]
+
+  #check for duplicates
+  duplicates <- duplicated(meta.merge$peak.tmp) | duplicated(meta.merge$peak.tmp, fromLast = TRUE)
+  meta.merge$strand[duplicates] <- "*"
+  meta.merge <- unique(meta.merge)
+
+  rownames(meta.merge) <- meta.merge$peak.tmp
+  meta.merge <- meta.merge[rownames(chromatin.m),]
+  meta.merge$peak.tmp <- NULL
+  BiocGenerics::strand(polyA.m@ranges) <- meta.merge$strand
+  polyA.m <- AddMetaData(polyA.m, meta.merge)
+  return(polyA.m)
 }
 
 
-#' Subset a polyA site assay 
+#' Subset a polyA site assay
 #'
 #' @param x A polyAsiteAssay
 #' @param features Which features to retain
 #' @param cells Which cells to retain
-#' 
+#'
 #' @export
 #' @concept objects
 #' @method subset polyAsiteAssay
-#' 
-subset.polyAsiteAssay <- function(x, 
-                                  features = NULL, 
+#'
+subset.polyAsiteAssay <- function(x,
+                                  features = NULL,
                                   cells= NULL, ...) {
   chromatin <- as(object = x, Class = 'ChromatinAssay')
   chromatin <- subset(x = chromatin, cells = cells, features = features, ...)
   chromatin <- as(object = chromatin, Class = 'polyAsiteAssay')
-  
+
   # Do center.scale.data slot subsetting
   #if (dim(x@center.scale.data)[1] >0 ) {
   #  center.scale <- GetAssayData(x, slot = "center.scale.data" )

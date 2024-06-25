@@ -33,7 +33,7 @@ PolyACoveragePlot <- function(object,
   if (!(is.null(region.plot))) {
       region.plot.tmp <- region.plot
   } else { # no region specified
-    meta <- object[[assay]][[]]
+    meta <- object[[assay]]@meta.features
      if ( dim(object[[assay]]@scale.data)[[1]] == 0) { #no polyA residuals
        message("PolyA Residuals not calculated and no region specified, will show all polyA sites in gene.")
        meta.sub <- meta

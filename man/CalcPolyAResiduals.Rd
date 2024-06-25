@@ -9,13 +9,15 @@ CalcPolyAResiduals(
   assay = "polyA",
   features = NULL,
   background = NULL,
-  gene.names = "symbol",
+  gene.names = "Gene_Symbol",
   min.counts.background = 5,
   min.variance = 0.1,
+  sample.n = 1000,
   do.scale = FALSE,
   do.center = FALSE,
   residuals.max = NULL,
   residuals.min = NULL,
+  number.bins = 30,
   verbose = TRUE
 )
 }
@@ -37,6 +39,8 @@ Default is symbol.}
 
 \item{min.variance}{Sets minimum variance. Default is 0.1.}
 
+\item{sample.n}{Max number of observations to sample in each bin when performing regularization. Default is 1000.}
+
 \item{do.scale}{Return the scaled residuals. Default is TRUE.}
 
 \item{do.center}{Return the centered residuals. Default is TRUE.}
@@ -44,6 +48,8 @@ Default is symbol.}
 \item{residuals.max}{Clip residuals above this value. Default is NULL (no clipping).}
 
 \item{residuals.min}{Clip residuals below this value. Default is NULL (no clipping).}
+
+\item{number.bins}{Number of bins used to perform regularization. Default is 30.}
 
 \item{verbose}{Print messages.}
 }
