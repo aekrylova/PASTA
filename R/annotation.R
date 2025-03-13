@@ -33,9 +33,9 @@ GetPolyADbAnnotation <- function(
   anno <- read.table(file = polyAdb.file, header = TRUE, sep="\t", quote = "")
   GR.polyA.db = makeGRangesFromDataFrame( anno,
                                           keep.extra.columns = TRUE,
-                                          seqnames.field = "hg38_Chromosome_format",
-                                          start.field = "hg38_Position",
-                                          end.field = "hg38_Position",
+                                          seqnames.field = "Chromosome",
+                                          start.field = "Position",
+                                          end.field = "Position",
                                           strand.field = "Strand")
 
   if( !assay %in% Assays(object) ){
