@@ -30,7 +30,7 @@ FindDifferentialPolyA <- function(
     ident.2,
     features = NULL,
     covariates = NULL,
-    gene.names = "Gene_Symbol") {
+    gene.names = "Gene.Symbol") {
 
   if( !inherits(object[[assay]], "polyAsiteAssay")){
     stop(paste0(assay," assay is not a polyAsiteAssay"))
