@@ -30,7 +30,7 @@ GetPolyADbAnnotation <- function(
     stop("Please check that you have specified the location of polyAdb.file correctly")
   }
 
-  anno <- read.table(file = polyAdb.file, header = TRUE)
+  anno <- read.table(file = polyAdb.file, header = TRUE, sep="\t", quote = "")
   GR.polyA.db = makeGRangesFromDataFrame( anno,
                                           keep.extra.columns = TRUE,
                                           seqnames.field = "hg38_Chromosome_format",
