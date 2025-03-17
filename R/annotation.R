@@ -33,10 +33,10 @@ GetPolyADbAnnotation <- function(
   anno <- read.table(file = polyAdb.file, header = TRUE, sep="\t", quote = "")
   GR.polyA.db = makeGRangesFromDataFrame( anno,
                                           keep.extra.columns = TRUE,
-                                          seqnames.field = "Chromosome",
-                                          start.field = "Position",
-                                          end.field = "Position",
-                                          strand.field = "Strand")
+                                          seqnames.field = "chrom",
+                                          start.field = "chromStart",
+                                          end.field = "chromEnd",
+                                          strand.field = "strand")
 
   if( !assay %in% Assays(object) ){
     stop(paste0(assay," assay is not present in object"))
